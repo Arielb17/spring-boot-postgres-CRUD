@@ -5,23 +5,23 @@ import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 
-import com.bezkoder.spring_boot_jpa_postgresql.model.Tutorial;
+import com.bezkoder.spring_boot_jpa_postgresql.dto.TutorialDto;
 
 public interface TutorialService {
 
-    Slice<Tutorial> getAllTutorials(String title, Pageable pageable);
+    Slice<TutorialDto> getAllTutorials(String title, Pageable pageable);
 
-    Optional<Tutorial> getTutorialById(long id);
+    Optional<TutorialDto> getTutorialById(long id);
 
-    Tutorial createTutorial(Tutorial tutorial);
+    TutorialDto createTutorial(TutorialDto tutorial);
 
-    Optional<Tutorial> updateTutorial(long id, Tutorial tutorial);
+    Optional<TutorialDto> updateTutorial(long id, TutorialDto tutorial);
 
     void deleteTutorial(long id);
 
     void deleteAllTutorials();
 
-    Slice<Tutorial> findByExactTitle(String title, Pageable pageable);
+    Slice<TutorialDto> findByExactTitle(String title, Pageable pageable);
 
-    Slice<Tutorial> findByPublished(Pageable pageable);
+    Slice<TutorialDto> findByPublished(Pageable pageable);
 }
