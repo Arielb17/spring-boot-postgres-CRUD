@@ -11,10 +11,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.bezkoder.spring_boot_jpa_postgresql.model.Author;
-import com.bezkoder.spring_boot_jpa_postgresql.model.Course;
-import com.bezkoder.spring_boot_jpa_postgresql.model.Tutorial;
-import com.bezkoder.spring_boot_jpa_postgresql.model.TutorialDetail;
+import com.bezkoder.spring_boot_jpa_postgresql.dto.AuthorDto;
+import com.bezkoder.spring_boot_jpa_postgresql.dto.CourseDto;
+import com.bezkoder.spring_boot_jpa_postgresql.dto.TutorialDto;
+import com.bezkoder.spring_boot_jpa_postgresql.dto.TutorialDetailDto;
 import com.bezkoder.spring_boot_jpa_postgresql.service.RelationshipService;
 
 @CrossOrigin(origins = "http://localhost:8081")
@@ -28,35 +28,35 @@ public class RelationshipController {
     }
 
     @PostMapping("/authors")
-    public ResponseEntity<Author> createAuthor(@RequestBody NameRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(relationshipService.createAuthor(request.name()));
+    public ResponseEntity<AuthorDto> createAuthor(@RequestBody AuthorDto authorDto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(relationshipService.createAuthor(authorDto));
     }
 
     @GetMapping("/authors/{id}")
-    public ResponseEntity<Author> getAuthor(@PathVariable Long id) {
+    public ResponseEntity<AuthorDto> getAuthor(@PathVariable Long id) {
         return relationshipService.getAuthor(id).map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping("/tutorials/{tutorialId}/author/{authorId}")
-    public ResponseEntity<Tutorial> setAuthor(@PathVariable Long tutorialId, @PathVariable Long authorId) {
+    public ResponseEntity<TutorialDto> setAuthor(@PathVariable Long tutorialId, @PathVariable Long authorId) {
         return relationshipService.setAuthor(tutorialId, authorId).map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping("/courses")
-    public ResponseEntity<Course> createCourse(@RequestBody NameRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(relationshipService.createCourse(request.name()));
+    public ResponseEntity<CourseDto> createCourse(@RequestBody CourseDto courseDto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(relationshipService.createCourse(courseDto));
     }
 
     @GetMapping("/courses/{id}")
-    public ResponseEntity<Course> getCourse(@PathVariable Long id) {
+    public ResponseEntity<CourseDto> getCourse(@PathVariable Long id) {
         return relationshipService.getCourse(id).map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping("/tutorials/{tutorialId}/courses/{courseId}")
-    public ResponseEntity<Tutorial> addCourse(@PathVariable Long tutorialId, @PathVariable Long courseId) {
+    public ResponseEntity<TutorialDto> addCourse(@PathVariable Long tutorialId, @PathVariable Long courseId) {
         return relationshipService.addCourse(tutorialId, courseId).map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -68,19 +68,16 @@ public class RelationshipController {
     }
 
     @PostMapping("/tutorials/{tutorialId}/detail")
-    public ResponseEntity<TutorialDetail> createDetail(@PathVariable Long tutorialId,
-            @RequestBody DetailRequest request) {
-        return relationshipService.createDetail(tutorialId, request.content(), request.estimatedMinutes())
+    public ResponseEntity<TutorialDetailDto> createDetail(@PathVariable Long tutorialId,
+            @RequestBody TutorialDetailDto detailDto) {
+        return relationshipService.createDetail(tutorialId, detailDto)
                 .map(detail -> ResponseEntity.status(HttpStatus.CREATED).body(detail))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping("/tutorials/{tutorialId}/detail")
-    public ResponseEntity<TutorialDetail> getDetail(@PathVariable Long tutorialId) {
+    public ResponseEntity<TutorialDetailDto> getDetail(@PathVariable Long tutorialId) {
         return relationshipService.getDetail(tutorialId).map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
-
-    public record NameRequest(String name) { }
-    public record DetailRequest(String content, Integer estimatedMinutes) { }
 }
