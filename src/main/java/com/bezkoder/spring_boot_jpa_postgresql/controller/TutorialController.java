@@ -1,7 +1,9 @@
 package com.bezkoder.spring_boot_jpa_postgresql.controller;
 
-import java.util.List;
-
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.SortDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -30,9 +32,10 @@ public class TutorialController {
     }
 
     @GetMapping("/tutorials")
-    public ResponseEntity<List<Tutorial>> getAllTutorials(@RequestParam(required = false) String title) {
+    public ResponseEntity<Slice<Tutorial>> getAllTutorials(@RequestParam(required = false) String title,
+            @SortDefault(sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
         try {
-            List<Tutorial> tutorials = tutorialService.getAllTutorials(title);
+            Slice<Tutorial> tutorials = tutorialService.getAllTutorials(title, pageable);
             return ResponseEntity.ok(tutorials);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
@@ -40,9 +43,10 @@ public class TutorialController {
     }
 
     @GetMapping("/tutorials/by-title")
-    public ResponseEntity<List<Tutorial>> findByExactTitle(@RequestParam String title) {
+    public ResponseEntity<Slice<Tutorial>> findByExactTitle(@RequestParam String title,
+            @SortDefault(sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
         try {
-            List<Tutorial> tutorials = tutorialService.findByExactTitle(title);
+            Slice<Tutorial> tutorials = tutorialService.findByExactTitle(title, pageable);
             return ResponseEntity.ok(tutorials);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
@@ -94,9 +98,10 @@ public class TutorialController {
     }
 
     @GetMapping("/tutorials/published")
-    public ResponseEntity<List<Tutorial>> findByPublished() {
+    public ResponseEntity<Slice<Tutorial>> findByPublished(
+            @SortDefault(sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
         try {
-            List<Tutorial> tutorials = tutorialService.findByPublished();
+            Slice<Tutorial> tutorials = tutorialService.findByPublished(pageable);
             return ResponseEntity.ok(tutorials);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();

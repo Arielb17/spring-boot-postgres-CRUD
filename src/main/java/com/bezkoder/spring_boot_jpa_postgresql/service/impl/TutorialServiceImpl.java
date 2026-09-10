@@ -1,8 +1,9 @@
 package com.bezkoder.spring_boot_jpa_postgresql.service.impl;
 
-import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 
 import com.bezkoder.spring_boot_jpa_postgresql.model.Tutorial;
@@ -19,12 +20,12 @@ public class TutorialServiceImpl implements TutorialService {
     }
 
     @Override
-    public List<Tutorial> getAllTutorials(String title) {
+    public Slice<Tutorial> getAllTutorials(String title, Pageable pageable) {
         if (title == null) {
-            return tutorialRepository.findAll();
+            return tutorialRepository.findAllBy(pageable);
         }
 
-        return tutorialRepository.findByTitleContaining(title);
+        return tutorialRepository.findByTitleContaining(title, pageable);
     }
 
     @Override
@@ -65,12 +66,12 @@ public class TutorialServiceImpl implements TutorialService {
     }
 
     @Override
-    public List<Tutorial> findByExactTitle(String title) {
-        return tutorialRepository.findByTitle(title);
+    public Slice<Tutorial> findByExactTitle(String title, Pageable pageable) {
+        return tutorialRepository.findByTitle(title, pageable);
     }
 
     @Override
-    public List<Tutorial> findByPublished() {
-        return tutorialRepository.findByPublished(true);
+    public Slice<Tutorial> findByPublished(Pageable pageable) {
+        return tutorialRepository.findByPublished(true, pageable);
     }
 }

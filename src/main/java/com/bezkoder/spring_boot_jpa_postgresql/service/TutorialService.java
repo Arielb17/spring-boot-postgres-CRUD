@@ -1,13 +1,15 @@
 package com.bezkoder.spring_boot_jpa_postgresql.service;
 
-import java.util.List;
 import java.util.Optional;
+
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 
 import com.bezkoder.spring_boot_jpa_postgresql.model.Tutorial;
 
 public interface TutorialService {
 
-    List<Tutorial> getAllTutorials(String title);
+    Slice<Tutorial> getAllTutorials(String title, Pageable pageable);
 
     Optional<Tutorial> getTutorialById(long id);
 
@@ -19,7 +21,7 @@ public interface TutorialService {
 
     void deleteAllTutorials();
 
-    List<Tutorial> findByExactTitle(String title);
+    Slice<Tutorial> findByExactTitle(String title, Pageable pageable);
 
-    List<Tutorial> findByPublished();
+    Slice<Tutorial> findByPublished(Pageable pageable);
 }

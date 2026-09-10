@@ -1,6 +1,5 @@
 package com.bezkoder.spring_boot_jpa_postgresql.model;
 
-//import javax.persistence.*; // for Spring Boot 2
 import jakarta.persistence.*; // for Spring Boot 3
 
 @Entity

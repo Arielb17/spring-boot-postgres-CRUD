@@ -6,12 +6,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -22,41 +25,72 @@ class TutorialControllerTest {
 
     private TutorialService tutorialService;
     private TutorialController tutorialController;
+    private Pageable pageable;
 
     @BeforeEach
     void setUp() {
         tutorialService = mock(TutorialService.class);
         tutorialController = new TutorialController(tutorialService);
+        pageable = PageRequest.of(1, 5);
     }
 
     @Test
     void getAllTutorialsReturnsOkWithTutorials() {
-        List<Tutorial> tutorials = List.of(new Tutorial("Spring", "REST API", true));
-        when(tutorialService.getAllTutorials(null)).thenReturn(tutorials);
+        Slice<Tutorial> tutorials = filledSlice();
+        when(tutorialService.getAllTutorials(null, pageable)).thenReturn(tutorials);
+        ResponseEntity<Slice<Tutorial>> response = tutorialController.getAllTutorials(null, pageable);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isSameAs(tutorials);
+        verify(tutorialService).getAllTutorials(null, pageable);
+    }
 
-        ResponseEntity<List<Tutorial>> response = tutorialController.getAllTutorials(null);
+    @Test
+    void getAllTutorialsWithoutTitleReturnsOkWithEmptySlice() {
+        Slice<Tutorial> tutorials = emptySlice();
+        when(tutorialService.getAllTutorials(null, pageable)).thenReturn(tutorials);
+
+        ResponseEntity<Slice<Tutorial>> response = tutorialController.getAllTutorials(null, pageable);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo(tutorials);
+        assertThat(response.getBody()).isSameAs(tutorials);
+        verify(tutorialService).getAllTutorials(null, pageable);
+    }
+
+    @Test
+    void getAllTutorialsWithTitleReturnsOkWithTutorials() {
+        Slice<Tutorial> tutorials = filledSlice();
+        when(tutorialService.getAllTutorials("Spring", pageable)).thenReturn(tutorials);
+
+        ResponseEntity<Slice<Tutorial>> response = tutorialController.getAllTutorials("Spring", pageable);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isSameAs(tutorials);
+        verify(tutorialService).getAllTutorials("Spring", pageable);
     }
 
     @Test
     void getAllTutorialsReturnsOkWithEmptyListAndPreservesTitleFilter() {
-        List<Tutorial> tutorials = Collections.emptyList();
-        when(tutorialService.getAllTutorials("Spring")).thenReturn(tutorials);
-
-        ResponseEntity<List<Tutorial>> response = tutorialController.getAllTutorials("Spring");
-
+        Slice<Tutorial> tutorials = emptySlice();
+        when(tutorialService.getAllTutorials("Spring", pageable)).thenReturn(tutorials);
+        ResponseEntity<Slice<Tutorial>> response = tutorialController.getAllTutorials("Spring", pageable);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEmpty();
-        verify(tutorialService).getAllTutorials("Spring");
+        assertThat(response.getBody()).isSameAs(tutorials);
+        verify(tutorialService).getAllTutorials("Spring", pageable);
     }
 
     @Test
     void getAllTutorialsReturnsInternalServerErrorOnUnexpectedError() {
-        when(tutorialService.getAllTutorials(null)).thenThrow(new RuntimeException());
+        when(tutorialService.getAllTutorials(null, pageable)).thenThrow(new RuntimeException());
+        ResponseEntity<Slice<Tutorial>> response = tutorialController.getAllTutorials(null, pageable);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getBody()).isNull();
+    }
 
-        ResponseEntity<List<Tutorial>> response = tutorialController.getAllTutorials(null);
+    @Test
+    void getAllTutorialsWithTitleReturnsInternalServerErrorOnUnexpectedError() {
+        when(tutorialService.getAllTutorials("Spring", pageable)).thenThrow(new RuntimeException());
+
+        ResponseEntity<Slice<Tutorial>> response = tutorialController.getAllTutorials("Spring", pageable);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(response.getBody()).isNull();
@@ -64,32 +98,27 @@ class TutorialControllerTest {
 
     @Test
     void findByExactTitleReturnsOkWithTutorialsAndForwardsTitle() {
-        List<Tutorial> tutorials = List.of(new Tutorial("Spring", "REST API", true));
-        when(tutorialService.findByExactTitle("Spring")).thenReturn(tutorials);
-
-        ResponseEntity<List<Tutorial>> response = tutorialController.findByExactTitle("Spring");
-
+        Slice<Tutorial> tutorials = filledSlice();
+        when(tutorialService.findByExactTitle("Spring", pageable)).thenReturn(tutorials);
+        ResponseEntity<Slice<Tutorial>> response = tutorialController.findByExactTitle("Spring", pageable);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo(tutorials);
-        verify(tutorialService).findByExactTitle("Spring");
+        assertThat(response.getBody()).isSameAs(tutorials);
+        verify(tutorialService).findByExactTitle("Spring", pageable);
     }
 
     @Test
     void findByExactTitleReturnsOkWithEmptyList() {
-        when(tutorialService.findByExactTitle("Missing")).thenReturn(Collections.emptyList());
-
-        ResponseEntity<List<Tutorial>> response = tutorialController.findByExactTitle("Missing");
-
+        Slice<Tutorial> tutorials = emptySlice();
+        when(tutorialService.findByExactTitle("Missing", pageable)).thenReturn(tutorials);
+        ResponseEntity<Slice<Tutorial>> response = tutorialController.findByExactTitle("Missing", pageable);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEmpty();
+        assertThat(response.getBody()).isSameAs(tutorials);
     }
 
     @Test
     void findByExactTitleReturnsInternalServerErrorOnUnexpectedError() {
-        when(tutorialService.findByExactTitle("Spring")).thenThrow(new RuntimeException());
-
-        ResponseEntity<List<Tutorial>> response = tutorialController.findByExactTitle("Spring");
-
+        when(tutorialService.findByExactTitle("Spring", pageable)).thenThrow(new RuntimeException());
+        ResponseEntity<Slice<Tutorial>> response = tutorialController.findByExactTitle("Spring", pageable);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(response.getBody()).isNull();
     }
@@ -201,32 +230,35 @@ class TutorialControllerTest {
 
     @Test
     void findByPublishedReturnsOkWithTutorials() {
-        List<Tutorial> tutorials = List.of(new Tutorial("Spring", "REST API", true));
-        when(tutorialService.findByPublished()).thenReturn(tutorials);
-
-        ResponseEntity<List<Tutorial>> response = tutorialController.findByPublished();
-
+        Slice<Tutorial> tutorials = filledSlice();
+        when(tutorialService.findByPublished(pageable)).thenReturn(tutorials);
+        ResponseEntity<Slice<Tutorial>> response = tutorialController.findByPublished(pageable);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo(tutorials);
+        assertThat(response.getBody()).isSameAs(tutorials);
     }
 
     @Test
     void findByPublishedReturnsOkWithEmptyList() {
-        when(tutorialService.findByPublished()).thenReturn(Collections.emptyList());
-
-        ResponseEntity<List<Tutorial>> response = tutorialController.findByPublished();
-
+        Slice<Tutorial> tutorials = emptySlice();
+        when(tutorialService.findByPublished(pageable)).thenReturn(tutorials);
+        ResponseEntity<Slice<Tutorial>> response = tutorialController.findByPublished(pageable);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEmpty();
+        assertThat(response.getBody()).isSameAs(tutorials);
     }
 
     @Test
     void findByPublishedReturnsInternalServerErrorOnUnexpectedError() {
-        when(tutorialService.findByPublished()).thenThrow(new RuntimeException());
-
-        ResponseEntity<List<Tutorial>> response = tutorialController.findByPublished();
-
+        when(tutorialService.findByPublished(pageable)).thenThrow(new RuntimeException());
+        ResponseEntity<Slice<Tutorial>> response = tutorialController.findByPublished(pageable);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(response.getBody()).isNull();
+    }
+
+    private Slice<Tutorial> filledSlice() {
+        return new SliceImpl<>(List.of(new Tutorial("Spring", "REST API", true)), pageable, true);
+    }
+
+    private Slice<Tutorial> emptySlice() {
+        return new SliceImpl<>(List.of(), pageable, false);
     }
 }
