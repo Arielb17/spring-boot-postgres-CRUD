@@ -47,9 +47,7 @@ public class TutorialController {
 
     @GetMapping("/tutorials/{id}")
     public ResponseEntity<TutorialDto> getTutorialById(@PathVariable("id") long id) {
-        return tutorialService.getTutorialById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        return ResponseEntity.ok(tutorialService.getTutorialById(id));
     }
 
     @PostMapping("/tutorials")
@@ -60,9 +58,7 @@ public class TutorialController {
 
     @PutMapping("/tutorials/{id}")
     public ResponseEntity<TutorialDto> updateTutorial(@PathVariable("id") long id, @RequestBody TutorialDto tutorial) {
-        return tutorialService.updateTutorial(id, tutorial)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        return ResponseEntity.ok(tutorialService.updateTutorial(id, tutorial));
     }
 
     @DeleteMapping("/tutorials/{id}")

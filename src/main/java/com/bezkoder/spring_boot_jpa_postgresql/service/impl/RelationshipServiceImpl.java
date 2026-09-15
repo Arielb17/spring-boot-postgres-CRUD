@@ -1,7 +1,5 @@
 package com.bezkoder.spring_boot_jpa_postgresql.service.impl;
 
-import java.util.Optional;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -9,10 +7,11 @@ import com.bezkoder.spring_boot_jpa_postgresql.dto.AuthorDto;
 import com.bezkoder.spring_boot_jpa_postgresql.dto.CourseDto;
 import com.bezkoder.spring_boot_jpa_postgresql.dto.TutorialDto;
 import com.bezkoder.spring_boot_jpa_postgresql.dto.TutorialDetailDto;
+import com.bezkoder.spring_boot_jpa_postgresql.exception.ResourceNotFoundException;
 import com.bezkoder.spring_boot_jpa_postgresql.mapper.AuthorMapper;
 import com.bezkoder.spring_boot_jpa_postgresql.mapper.CourseMapper;
-import com.bezkoder.spring_boot_jpa_postgresql.mapper.TutorialMapper;
 import com.bezkoder.spring_boot_jpa_postgresql.mapper.TutorialDetailMapper;
+import com.bezkoder.spring_boot_jpa_postgresql.mapper.TutorialMapper;
 import com.bezkoder.spring_boot_jpa_postgresql.model.Author;
 import com.bezkoder.spring_boot_jpa_postgresql.model.Course;
 import com.bezkoder.spring_boot_jpa_postgresql.model.Tutorial;
@@ -25,6 +24,13 @@ import com.bezkoder.spring_boot_jpa_postgresql.service.RelationshipService;
 
 @Service
 public class RelationshipServiceImpl implements RelationshipService {
+
+    private static final String AUTHOR_NOT_FOUND = "Autor não encontrado.";
+    private static final String COURSE_NOT_FOUND = "Curso não encontrado.";
+    private static final String DETAIL_NOT_FOUND = "Detalhe do tutorial não encontrado.";
+    private static final String TUTORIAL_NOT_FOUND = "Tutorial não encontrado.";
+    private static final String TUTORIAL_COURSE_NOT_FOUND = "Curso não está associado ao tutorial.";
+
     private final AuthorRepository authorRepository;
     private final CourseRepository courseRepository;
     private final TutorialRepository tutorialRepository;
@@ -57,18 +63,17 @@ public class RelationshipServiceImpl implements RelationshipService {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<AuthorDto> getAuthor(Long id) {
-        return authorRepository.findById(id).map(authorMapper::toDto);
+    public AuthorDto getAuthor(Long id) {
+        return authorMapper.toDto(findAuthor(id));
     }
 
     @Override
     @Transactional
-    public Optional<TutorialDto> setAuthor(Long tutorialId, Long authorId) {
-        Optional<Tutorial> tutorial = tutorialRepository.findById(tutorialId);
-        Optional<Author> author = authorRepository.findById(authorId);
-        if (tutorial.isEmpty() || author.isEmpty()) return Optional.empty();
-        tutorial.get().setAuthor(author.get());
-        return Optional.of(tutorialMapper.toDto(tutorialRepository.save(tutorial.get())));
+    public TutorialDto setAuthor(Long tutorialId, Long authorId) {
+        Tutorial tutorial = findTutorial(tutorialId);
+        Author author = findAuthor(authorId);
+        tutorial.setAuthor(author);
+        return tutorialMapper.toDto(tutorialRepository.save(tutorial));
     }
 
     @Override
@@ -80,44 +85,60 @@ public class RelationshipServiceImpl implements RelationshipService {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<CourseDto> getCourse(Long id) {
-        return courseRepository.findById(id).map(courseMapper::toDto);
+    public CourseDto getCourse(Long id) {
+        return courseMapper.toDto(findCourse(id));
     }
 
     @Override
     @Transactional
-    public Optional<TutorialDto> addCourse(Long tutorialId, Long courseId) {
-        Optional<Tutorial> tutorial = tutorialRepository.findById(tutorialId);
-        Optional<Course> course = courseRepository.findById(courseId);
-        if (tutorial.isEmpty() || course.isEmpty()) return Optional.empty();
-        tutorial.get().addCourse(course.get());
-        return Optional.of(tutorialMapper.toDto(tutorialRepository.save(tutorial.get())));
+    public TutorialDto addCourse(Long tutorialId, Long courseId) {
+        Tutorial tutorial = findTutorial(tutorialId);
+        Course course = findCourse(courseId);
+        tutorial.addCourse(course);
+        return tutorialMapper.toDto(tutorialRepository.save(tutorial));
     }
 
     @Override
     @Transactional
-    public Optional<TutorialDto> removeCourse(Long tutorialId, Long courseId) {
-        Optional<Tutorial> tutorial = tutorialRepository.findById(tutorialId);
-        Optional<Course> course = courseRepository.findById(courseId);
-        if (tutorial.isEmpty() || course.isEmpty()) return Optional.empty();
-        tutorial.get().removeCourse(course.get());
-        return Optional.of(tutorialMapper.toDto(tutorialRepository.save(tutorial.get())));
+    public void removeCourse(Long tutorialId, Long courseId) {
+        Tutorial tutorial = findTutorial(tutorialId);
+        Course course = findCourse(courseId);
+        if (!tutorial.removeCourse(course)) {
+            throw new ResourceNotFoundException(TUTORIAL_COURSE_NOT_FOUND);
+        }
+        tutorialRepository.save(tutorial);
     }
 
     @Override
     @Transactional
-    public Optional<TutorialDetailDto> createDetail(Long tutorialId, TutorialDetailDto detailDto) {
-        Optional<Tutorial> tutorial = tutorialRepository.findById(tutorialId);
-        if (tutorial.isEmpty()) return Optional.empty();
+    public TutorialDetailDto createDetail(Long tutorialId, TutorialDetailDto detailDto) {
+        Tutorial tutorial = findTutorial(tutorialId);
         TutorialDetail detail = detailMapper.toEntity(detailDto);
-        tutorial.get().setDetail(detail);
-        Tutorial savedTutorial = tutorialRepository.save(tutorial.get());
-        return Optional.of(detailMapper.toDto(savedTutorial.getDetail()));
+        tutorial.setDetail(detail);
+        Tutorial savedTutorial = tutorialRepository.save(tutorial);
+        return detailMapper.toDto(savedTutorial.getDetail());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<TutorialDetailDto> getDetail(Long tutorialId) {
-        return detailRepository.findByTutorialId(tutorialId).map(detailMapper::toDto);
+    public TutorialDetailDto getDetail(Long tutorialId) {
+        TutorialDetail detail = detailRepository.findByTutorialId(tutorialId)
+                .orElseThrow(() -> new ResourceNotFoundException(DETAIL_NOT_FOUND));
+        return detailMapper.toDto(detail);
+    }
+
+    private Author findAuthor(Long id) {
+        return authorRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(AUTHOR_NOT_FOUND));
+    }
+
+    private Course findCourse(Long id) {
+        return courseRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(COURSE_NOT_FOUND));
+    }
+
+    private Tutorial findTutorial(Long id) {
+        return tutorialRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(TUTORIAL_NOT_FOUND));
     }
 }

@@ -27,6 +27,7 @@ import com.bezkoder.spring_boot_jpa_postgresql.dto.AuthorDto;
 import com.bezkoder.spring_boot_jpa_postgresql.dto.CourseDto;
 import com.bezkoder.spring_boot_jpa_postgresql.dto.TutorialDetailDto;
 import com.bezkoder.spring_boot_jpa_postgresql.dto.TutorialDto;
+import com.bezkoder.spring_boot_jpa_postgresql.exception.ResourceNotFoundException;
 import com.bezkoder.spring_boot_jpa_postgresql.mapper.CourseMapperImpl;
 import com.bezkoder.spring_boot_jpa_postgresql.mapper.TutorialDetailMapperImpl;
 import com.bezkoder.spring_boot_jpa_postgresql.mapper.TutorialMapperImpl;
@@ -197,13 +198,12 @@ class TutorialServiceImplTest {
         when(tutorialRepository.findById(1L)).thenReturn(Optional.of(existing));
         when(tutorialRepository.save(existing)).thenReturn(existing);
 
-        Optional<TutorialDto> result = tutorialService.updateTutorial(1L, request);
+        TutorialDto result = tutorialService.updateTutorial(1L, request);
 
-        assertThat(result).isPresent();
-        assertThat(result.get().getId()).isEqualTo(1L);
-        assertThat(result.get().getTitle()).isEqualTo("Updated");
-        assertThat(result.get().getDescription()).isEqualTo("Updated description");
-        assertThat(result.get().isPublished()).isTrue();
+        assertThat(result.getId()).isEqualTo(1L);
+        assertThat(result.getTitle()).isEqualTo("Updated");
+        assertThat(result.getDescription()).isEqualTo("Updated description");
+        assertThat(result.isPublished()).isTrue();
         assertThat(existing.getId()).isEqualTo(1L);
         assertThat(existing.getAuthor()).isSameAs(author);
         assertThat(existing.getCourses()).containsExactly(course);
@@ -213,6 +213,37 @@ class TutorialServiceImplTest {
         assertThat(detail.getTutorial()).isSameAs(existing);
         verify(tutorialRepository).findById(1L);
         verify(tutorialRepository).save(existing);
+        verifyNoMoreInteractions(tutorialRepository);
+    }
+
+    @Test
+    void missingTutorialThrowsResourceNotFoundForReadUpdateAndDelete() {
+        when(tutorialRepository.findById(99L)).thenReturn(Optional.empty());
+        TutorialDto request = new TutorialDto("Updated", "Description", true);
+
+        assertThatThrownBy(() -> tutorialService.getTutorialById(99L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Tutorial não encontrado.");
+        assertThatThrownBy(() -> tutorialService.updateTutorial(99L, request))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Tutorial não encontrado.");
+        assertThatThrownBy(() -> tutorialService.deleteTutorial(99L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Tutorial não encontrado.");
+
+        verify(tutorialRepository, times(3)).findById(99L);
+        verifyNoMoreInteractions(tutorialRepository);
+    }
+
+    @Test
+    void deleteTutorialRemovesTheEntityFoundById() {
+        Tutorial tutorial = new Tutorial("Spring", "REST API", true);
+        when(tutorialRepository.findById(1L)).thenReturn(Optional.of(tutorial));
+
+        tutorialService.deleteTutorial(1L);
+
+        verify(tutorialRepository).findById(1L);
+        verify(tutorialRepository).delete(tutorial);
         verifyNoMoreInteractions(tutorialRepository);
     }
 

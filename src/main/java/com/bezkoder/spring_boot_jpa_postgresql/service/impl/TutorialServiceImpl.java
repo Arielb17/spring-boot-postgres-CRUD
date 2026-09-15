@@ -1,13 +1,12 @@
 package com.bezkoder.spring_boot_jpa_postgresql.service.impl;
 
-import java.util.Optional;
-
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.bezkoder.spring_boot_jpa_postgresql.dto.TutorialDto;
+import com.bezkoder.spring_boot_jpa_postgresql.exception.ResourceNotFoundException;
 import com.bezkoder.spring_boot_jpa_postgresql.mapper.TutorialMapper;
 import com.bezkoder.spring_boot_jpa_postgresql.model.Tutorial;
 import com.bezkoder.spring_boot_jpa_postgresql.repository.TutorialRepository;
@@ -15,6 +14,8 @@ import com.bezkoder.spring_boot_jpa_postgresql.service.TutorialService;
 
 @Service
 public class TutorialServiceImpl implements TutorialService {
+
+    private static final String TUTORIAL_NOT_FOUND = "Tutorial não encontrado.";
 
     private final TutorialRepository tutorialRepository;
     private final TutorialMapper tutorialMapper;
@@ -36,8 +37,8 @@ public class TutorialServiceImpl implements TutorialService {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<TutorialDto> getTutorialById(long id) {
-        return tutorialRepository.findById(id).map(tutorialMapper::toDto);
+    public TutorialDto getTutorialById(long id) {
+        return tutorialMapper.toDto(findTutorial(id));
     }
 
     @Override
@@ -50,22 +51,16 @@ public class TutorialServiceImpl implements TutorialService {
 
     @Override
     @Transactional
-    public Optional<TutorialDto> updateTutorial(long id, TutorialDto tutorial) {
-        Optional<Tutorial> tutorialData = tutorialRepository.findById(id);
-
-        if (tutorialData.isEmpty()) {
-            return Optional.empty();
-        }
-
-        Tutorial existingTutorial = tutorialData.get();
+    public TutorialDto updateTutorial(long id, TutorialDto tutorial) {
+        Tutorial existingTutorial = findTutorial(id);
         tutorialMapper.updateEntityFromDto(tutorial, existingTutorial);
-
-        return Optional.of(tutorialMapper.toDto(tutorialRepository.save(existingTutorial)));
+        return tutorialMapper.toDto(tutorialRepository.save(existingTutorial));
     }
 
     @Override
+    @Transactional
     public void deleteTutorial(long id) {
-        tutorialRepository.deleteById(id);
+        tutorialRepository.delete(findTutorial(id));
     }
 
     @Override
@@ -83,5 +78,10 @@ public class TutorialServiceImpl implements TutorialService {
     @Transactional(readOnly = true)
     public Slice<TutorialDto> findByPublished(Pageable pageable) {
         return tutorialRepository.findByPublished(true, pageable).map(tutorialMapper::toDto);
+    }
+
+    private Tutorial findTutorial(long id) {
+        return tutorialRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(TUTORIAL_NOT_FOUND));
     }
 }

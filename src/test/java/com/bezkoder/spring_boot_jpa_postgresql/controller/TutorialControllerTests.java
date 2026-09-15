@@ -17,7 +17,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -38,6 +37,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.bezkoder.spring_boot_jpa_postgresql.dto.TutorialDto;
+import com.bezkoder.spring_boot_jpa_postgresql.exception.ResourceNotFoundException;
 import com.bezkoder.spring_boot_jpa_postgresql.service.TutorialService;
 
 @WebMvcTest(TutorialController.class)
@@ -48,6 +48,7 @@ class TutorialControllerTests {
     private static final String INVALID_PARAMETER_DETAIL = "Parâmetro da requisição inválido.";
     private static final String CONFLICT_DETAIL = "A operação entra em conflito com os dados existentes.";
     private static final String INTERNAL_ERROR_DETAIL = "Ocorreu um erro interno ao processar a requisição.";
+    private static final String TUTORIAL_NOT_FOUND_DETAIL = "Tutorial não encontrado.";
 
     @Autowired
     private MockMvc mockMvc;
@@ -238,10 +239,13 @@ class TutorialControllerTests {
 
     @Test
     void shouldReturnNotFoundWhenTutorialIsAbsent() throws Exception {
-        when(service.getTutorialById(99L)).thenReturn(Optional.empty());
+        when(service.getTutorialById(99L))
+                .thenThrow(new ResourceNotFoundException(TUTORIAL_NOT_FOUND_DETAIL));
+
         mockMvc.perform(get("/api/tutorials/99"))
                 .andExpect(status().isNotFound())
-                .andExpect(content().string(""));
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value(TUTORIAL_NOT_FOUND_DETAIL));
     }
 
     @Test
@@ -279,7 +283,7 @@ class TutorialControllerTests {
     @Test
     void shouldReturnTutorialById() throws Exception {
         when(service.getTutorialById(1L))
-                .thenReturn(Optional.of(new TutorialDto("Spring Data JPA", "Tutorial description", false)));
+                .thenReturn(new TutorialDto("Spring Data JPA", "Tutorial description", false));
 
         mockMvc.perform(get("/api/tutorials/1"))
                 .andExpect(status().isOk())
@@ -322,7 +326,7 @@ class TutorialControllerTests {
     @Test
     void shouldUpdateTutorial() throws Exception {
         when(service.updateTutorial(eq(1L), any(TutorialDto.class)))
-                .thenReturn(Optional.of(new TutorialDto("New title", "New description", true)));
+                .thenReturn(new TutorialDto("New title", "New description", true));
 
         mockMvc.perform(put("/api/tutorials/1")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -336,6 +340,19 @@ class TutorialControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("New title"))
                 .andExpect(jsonPath("$.published").value(true));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenUpdatingMissingTutorial() throws Exception {
+        when(service.updateTutorial(eq(99L), any(TutorialDto.class)))
+                .thenThrow(new ResourceNotFoundException(TUTORIAL_NOT_FOUND_DETAIL));
+
+        mockMvc.perform(put("/api/tutorials/99")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Missing\",\"description\":\"x\",\"published\":true}"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value(TUTORIAL_NOT_FOUND_DETAIL));
     }
 
     @Test
@@ -360,6 +377,17 @@ class TutorialControllerTests {
                 .andExpect(content().string(""));
 
         verify(service).deleteTutorial(1L);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenDeletingMissingTutorial() throws Exception {
+        doThrow(new ResourceNotFoundException(TUTORIAL_NOT_FOUND_DETAIL))
+                .when(service).deleteTutorial(99L);
+
+        mockMvc.perform(delete("/api/tutorials/99"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value(TUTORIAL_NOT_FOUND_DETAIL));
     }
 
     @Test

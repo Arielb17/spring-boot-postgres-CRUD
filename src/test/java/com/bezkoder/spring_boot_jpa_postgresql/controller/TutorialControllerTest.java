@@ -8,7 +8,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import com.bezkoder.spring_boot_jpa_postgresql.dto.TutorialDto;
+import com.bezkoder.spring_boot_jpa_postgresql.exception.ResourceNotFoundException;
 import com.bezkoder.spring_boot_jpa_postgresql.service.TutorialService;
 
 class TutorialControllerTest {
@@ -125,7 +125,7 @@ class TutorialControllerTest {
     @Test
     void getTutorialByIdReturnsOkWhenFound() {
         TutorialDto tutorial = new TutorialDto("Spring", "REST API", true);
-        when(tutorialService.getTutorialById(1L)).thenReturn(Optional.of(tutorial));
+        when(tutorialService.getTutorialById(1L)).thenReturn(tutorial);
 
         ResponseEntity<TutorialDto> response = tutorialController.getTutorialById(1L);
 
@@ -134,13 +134,12 @@ class TutorialControllerTest {
     }
 
     @Test
-    void getTutorialByIdReturnsNotFoundWhenMissing() {
-        when(tutorialService.getTutorialById(99L)).thenReturn(Optional.empty());
+    void getTutorialByIdPropagatesNotFoundToGlobalHandler() {
+        when(tutorialService.getTutorialById(99L))
+                .thenThrow(new ResourceNotFoundException("Tutorial não encontrado."));
 
-        ResponseEntity<TutorialDto> response = tutorialController.getTutorialById(99L);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(response.getBody()).isNull();
+        assertThatThrownBy(() -> tutorialController.getTutorialById(99L))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
@@ -168,7 +167,7 @@ class TutorialControllerTest {
     void updateTutorialReturnsOkWhenFound() {
         TutorialDto request = new TutorialDto("Updated", "Updated description", true);
         TutorialDto updated = new TutorialDto("Updated", "Updated description", true);
-        when(tutorialService.updateTutorial(1L, request)).thenReturn(Optional.of(updated));
+        when(tutorialService.updateTutorial(1L, request)).thenReturn(updated);
 
         ResponseEntity<TutorialDto> response = tutorialController.updateTutorial(1L, request);
 
@@ -177,14 +176,13 @@ class TutorialControllerTest {
     }
 
     @Test
-    void updateTutorialReturnsNotFoundWhenMissing() {
+    void updateTutorialPropagatesNotFoundToGlobalHandler() {
         TutorialDto request = new TutorialDto("Updated", "Updated description", true);
-        when(tutorialService.updateTutorial(99L, request)).thenReturn(Optional.empty());
+        when(tutorialService.updateTutorial(99L, request))
+                .thenThrow(new ResourceNotFoundException("Tutorial não encontrado."));
 
-        ResponseEntity<TutorialDto> response = tutorialController.updateTutorial(99L, request);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(response.getBody()).isNull();
+        assertThatThrownBy(() -> tutorialController.updateTutorial(99L, request))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test

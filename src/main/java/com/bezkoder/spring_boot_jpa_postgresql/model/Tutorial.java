@@ -87,10 +87,12 @@ public class Tutorial {
         }
     }
 
-    public void removeCourse(Course course) {
-        if (courses.remove(course)) {
-            course.getTutorials().remove(this);
+    public boolean removeCourse(Course course) {
+        if (!courses.remove(course)) {
+            return false;
         }
+        course.getTutorials().remove(this);
+        return true;
     }
 
     public TutorialDetail getDetail() {

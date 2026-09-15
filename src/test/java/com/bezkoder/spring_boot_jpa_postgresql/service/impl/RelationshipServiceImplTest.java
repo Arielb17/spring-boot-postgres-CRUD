@@ -1,6 +1,7 @@
 package com.bezkoder.spring_boot_jpa_postgresql.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -18,6 +19,7 @@ import com.bezkoder.spring_boot_jpa_postgresql.dto.AuthorDto;
 import com.bezkoder.spring_boot_jpa_postgresql.dto.CourseDto;
 import com.bezkoder.spring_boot_jpa_postgresql.dto.TutorialDetailDto;
 import com.bezkoder.spring_boot_jpa_postgresql.dto.TutorialDto;
+import com.bezkoder.spring_boot_jpa_postgresql.exception.ResourceNotFoundException;
 import com.bezkoder.spring_boot_jpa_postgresql.mapper.AuthorMapperImpl;
 import com.bezkoder.spring_boot_jpa_postgresql.mapper.CourseMapperImpl;
 import com.bezkoder.spring_boot_jpa_postgresql.mapper.TutorialDetailMapperImpl;
@@ -104,7 +106,7 @@ class RelationshipServiceImplTest {
         when(authorRepository.findById(2L)).thenReturn(Optional.of(nextAuthor));
         when(tutorialRepository.save(tutorial)).thenReturn(tutorial);
 
-        TutorialDto result = relationshipService.setAuthor(1L, 2L).orElseThrow();
+        TutorialDto result = relationshipService.setAuthor(1L, 2L);
 
         assertThat(tutorial.getAuthor()).isSameAs(nextAuthor);
         assertThat(previousAuthor.getTutorials()).isEmpty();
@@ -122,7 +124,7 @@ class RelationshipServiceImplTest {
         when(courseRepository.findById(2L)).thenReturn(Optional.of(course));
         when(tutorialRepository.save(tutorial)).thenReturn(tutorial);
 
-        TutorialDto added = relationshipService.addCourse(1L, 2L).orElseThrow();
+        TutorialDto added = relationshipService.addCourse(1L, 2L);
 
         assertThat(tutorial.getCourses()).containsExactly(course);
         assertThat(course.getTutorials()).containsExactly(tutorial);
@@ -131,11 +133,10 @@ class RelationshipServiceImplTest {
             assertThat(mappedCourse.getName()).isEqualTo("Java");
         });
 
-        TutorialDto removed = relationshipService.removeCourse(1L, 2L).orElseThrow();
+        relationshipService.removeCourse(1L, 2L);
 
         assertThat(tutorial.getCourses()).isEmpty();
         assertThat(course.getTutorials()).isEmpty();
-        assertThat(removed.getCourses()).isEmpty();
         assertThat(added.getCourses()).hasSize(1);
     }
 
@@ -156,7 +157,7 @@ class RelationshipServiceImplTest {
             return tutorial;
         });
 
-        TutorialDetailDto result = relationshipService.createDetail(1L, request).orElseThrow();
+        TutorialDetailDto result = relationshipService.createDetail(1L, request);
 
         assertThat(tutorial.getDetail().getTutorial()).isSameAs(tutorial);
         assertThat(previousDetail.getTutorial()).isNull();
@@ -183,9 +184,9 @@ class RelationshipServiceImplTest {
         when(courseRepository.findById(3L)).thenReturn(Optional.of(course));
         when(detailRepository.findByTutorialId(1L)).thenReturn(Optional.of(detail));
 
-        AuthorDto mappedAuthor = relationshipService.getAuthor(2L).orElseThrow();
-        CourseDto mappedCourse = relationshipService.getCourse(3L).orElseThrow();
-        TutorialDetailDto mappedDetail = relationshipService.getDetail(1L).orElseThrow();
+        AuthorDto mappedAuthor = relationshipService.getAuthor(2L);
+        CourseDto mappedCourse = relationshipService.getCourse(3L);
+        TutorialDetailDto mappedDetail = relationshipService.getDetail(1L);
 
         assertThat(mappedAuthor.getId()).isEqualTo(2L);
         assertThat(mappedAuthor.getTutorials()).singleElement().satisfies(mappedTutorial -> {
@@ -204,19 +205,34 @@ class RelationshipServiceImplTest {
     }
 
     @Test
-    void missingResourcesKeepEmptyOptionalsAndDoNotSave() {
+    void missingResourcesThrowSpecificNotFoundExceptionsAndDoNotSave() {
         when(tutorialRepository.findById(1L)).thenReturn(Optional.empty());
         when(authorRepository.findById(2L)).thenReturn(Optional.empty());
         when(courseRepository.findById(3L)).thenReturn(Optional.empty());
         when(detailRepository.findByTutorialId(1L)).thenReturn(Optional.empty());
 
-        assertThat(relationshipService.getAuthor(2L)).isEmpty();
-        assertThat(relationshipService.getCourse(3L)).isEmpty();
-        assertThat(relationshipService.getDetail(1L)).isEmpty();
-        assertThat(relationshipService.setAuthor(1L, 2L)).isEmpty();
-        assertThat(relationshipService.addCourse(1L, 3L)).isEmpty();
-        assertThat(relationshipService.removeCourse(1L, 3L)).isEmpty();
-        assertThat(relationshipService.createDetail(1L, new TutorialDetailDto("Content", 20))).isEmpty();
+        assertThatThrownBy(() -> relationshipService.getAuthor(2L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Autor não encontrado.");
+        assertThatThrownBy(() -> relationshipService.getCourse(3L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Curso não encontrado.");
+        assertThatThrownBy(() -> relationshipService.getDetail(1L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Detalhe do tutorial não encontrado.");
+        assertThatThrownBy(() -> relationshipService.setAuthor(1L, 2L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Tutorial não encontrado.");
+        assertThatThrownBy(() -> relationshipService.addCourse(1L, 3L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Tutorial não encontrado.");
+        assertThatThrownBy(() -> relationshipService.removeCourse(1L, 3L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Tutorial não encontrado.");
+        assertThatThrownBy(() -> relationshipService.createDetail(1L, new TutorialDetailDto("Content", 20)))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Tutorial não encontrado.");
+
         verify(tutorialRepository, never()).save(any(Tutorial.class));
         verify(authorRepository, never()).save(any(Author.class));
         verify(courseRepository, never()).save(any(Course.class));
@@ -233,11 +249,32 @@ class RelationshipServiceImplTest {
         when(authorRepository.findById(2L)).thenReturn(Optional.empty());
         when(courseRepository.findById(3L)).thenReturn(Optional.empty());
 
-        assertThat(relationshipService.setAuthor(1L, 2L)).isEmpty();
-        assertThat(relationshipService.addCourse(1L, 3L)).isEmpty();
-        assertThat(relationshipService.removeCourse(1L, 3L)).isEmpty();
+        assertThatThrownBy(() -> relationshipService.setAuthor(1L, 2L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Autor não encontrado.");
+        assertThatThrownBy(() -> relationshipService.addCourse(1L, 3L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Curso não encontrado.");
+        assertThatThrownBy(() -> relationshipService.removeCourse(1L, 3L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Curso não encontrado.");
         assertThat(tutorial.getAuthor()).isSameAs(originalAuthor);
         assertThat(tutorial.getCourses()).containsExactly(originalCourse);
+        verify(tutorialRepository, never()).save(any(Tutorial.class));
+    }
+
+    @Test
+    void removingCourseThatIsNotAssociatedThrowsNotFoundAndDoesNotSave() {
+        Tutorial tutorial = tutorial(1L);
+        Course course = new Course("Java");
+        when(tutorialRepository.findById(1L)).thenReturn(Optional.of(tutorial));
+        when(courseRepository.findById(2L)).thenReturn(Optional.of(course));
+
+        assertThatThrownBy(() -> relationshipService.removeCourse(1L, 2L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Curso não está associado ao tutorial.");
+
+        assertThat(tutorial.getCourses()).isEmpty();
         verify(tutorialRepository, never()).save(any(Tutorial.class));
     }
 

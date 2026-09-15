@@ -1,7 +1,5 @@
 package com.bezkoder.spring_boot_jpa_postgresql.service;
 
-import java.util.Optional;
-
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 
@@ -11,11 +9,11 @@ public interface TutorialService {
 
     Slice<TutorialDto> getAllTutorials(String title, Pageable pageable);
 
-    Optional<TutorialDto> getTutorialById(long id);
+    TutorialDto getTutorialById(long id);
 
     TutorialDto createTutorial(TutorialDto tutorial);
 
-    Optional<TutorialDto> updateTutorial(long id, TutorialDto tutorial);
+    TutorialDto updateTutorial(long id, TutorialDto tutorial);
 
     void deleteTutorial(long id);
 
