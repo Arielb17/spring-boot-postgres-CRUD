@@ -5,7 +5,10 @@ import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.bezkoder.spring_boot_jpa_postgresql.dto.TutorialDto;
+import com.bezkoder.spring_boot_jpa_postgresql.mapper.TutorialMapper;
 import com.bezkoder.spring_boot_jpa_postgresql.model.Tutorial;
 import com.bezkoder.spring_boot_jpa_postgresql.repository.TutorialRepository;
 import com.bezkoder.spring_boot_jpa_postgresql.service.TutorialService;
@@ -14,33 +17,40 @@ import com.bezkoder.spring_boot_jpa_postgresql.service.TutorialService;
 public class TutorialServiceImpl implements TutorialService {
 
     private final TutorialRepository tutorialRepository;
+    private final TutorialMapper tutorialMapper;
 
-    public TutorialServiceImpl(TutorialRepository tutorialRepository) {
+    public TutorialServiceImpl(TutorialRepository tutorialRepository, TutorialMapper tutorialMapper) {
         this.tutorialRepository = tutorialRepository;
+        this.tutorialMapper = tutorialMapper;
     }
 
     @Override
-    public Slice<Tutorial> getAllTutorials(String title, Pageable pageable) {
+    @Transactional(readOnly = true)
+    public Slice<TutorialDto> getAllTutorials(String title, Pageable pageable) {
         if (title == null) {
-            return tutorialRepository.findAllBy(pageable);
+            return tutorialRepository.findAllBy(pageable).map(tutorialMapper::toDto);
         }
 
-        return tutorialRepository.findByTitleContaining(title, pageable);
+        return tutorialRepository.findByTitleContaining(title, pageable).map(tutorialMapper::toDto);
     }
 
     @Override
-    public Optional<Tutorial> getTutorialById(long id) {
-        return tutorialRepository.findById(id);
+    @Transactional(readOnly = true)
+    public Optional<TutorialDto> getTutorialById(long id) {
+        return tutorialRepository.findById(id).map(tutorialMapper::toDto);
     }
 
     @Override
-    public Tutorial createTutorial(Tutorial tutorial) {
-        Tutorial newTutorial = new Tutorial(tutorial.getTitle(), tutorial.getDescription(), false);
-        return tutorialRepository.save(newTutorial);
+    @Transactional
+    public TutorialDto createTutorial(TutorialDto tutorial) {
+        Tutorial newTutorial = tutorialMapper.toEntity(tutorial);
+        newTutorial.setPublished(false);
+        return tutorialMapper.toDto(tutorialRepository.save(newTutorial));
     }
 
     @Override
-    public Optional<Tutorial> updateTutorial(long id, Tutorial tutorial) {
+    @Transactional
+    public Optional<TutorialDto> updateTutorial(long id, TutorialDto tutorial) {
         Optional<Tutorial> tutorialData = tutorialRepository.findById(id);
 
         if (tutorialData.isEmpty()) {
@@ -48,11 +58,9 @@ public class TutorialServiceImpl implements TutorialService {
         }
 
         Tutorial existingTutorial = tutorialData.get();
-        existingTutorial.setTitle(tutorial.getTitle());
-        existingTutorial.setDescription(tutorial.getDescription());
-        existingTutorial.setPublished(tutorial.isPublished());
+        tutorialMapper.updateEntityFromDto(tutorial, existingTutorial);
 
-        return Optional.of(tutorialRepository.save(existingTutorial));
+        return Optional.of(tutorialMapper.toDto(tutorialRepository.save(existingTutorial)));
     }
 
     @Override
@@ -66,12 +74,14 @@ public class TutorialServiceImpl implements TutorialService {
     }
 
     @Override
-    public Slice<Tutorial> findByExactTitle(String title, Pageable pageable) {
-        return tutorialRepository.findByTitle(title, pageable);
+    @Transactional(readOnly = true)
+    public Slice<TutorialDto> findByExactTitle(String title, Pageable pageable) {
+        return tutorialRepository.findByTitle(title, pageable).map(tutorialMapper::toDto);
     }
 
     @Override
-    public Slice<Tutorial> findByPublished(Pageable pageable) {
-        return tutorialRepository.findByPublished(true, pageable);
+    @Transactional(readOnly = true)
+    public Slice<TutorialDto> findByPublished(Pageable pageable) {
+        return tutorialRepository.findByPublished(true, pageable).map(tutorialMapper::toDto);
     }
 }

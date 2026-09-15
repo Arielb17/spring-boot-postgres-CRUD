@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.bezkoder.spring_boot_jpa_postgresql.model.Tutorial;
+import com.bezkoder.spring_boot_jpa_postgresql.dto.TutorialDto;
 import com.bezkoder.spring_boot_jpa_postgresql.service.TutorialService;
 
 @CrossOrigin(origins = "http://localhost:8081")
@@ -32,34 +32,34 @@ public class TutorialController {
     }
 
     @GetMapping("/tutorials")
-    public ResponseEntity<Slice<Tutorial>> getAllTutorials(@RequestParam(required = false) String title,
+    public ResponseEntity<Slice<TutorialDto>> getAllTutorials(@RequestParam(required = false) String title,
             @SortDefault(sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
-        Slice<Tutorial> tutorials = tutorialService.getAllTutorials(title, pageable);
+        Slice<TutorialDto> tutorials = tutorialService.getAllTutorials(title, pageable);
         return ResponseEntity.ok(tutorials);
     }
 
     @GetMapping("/tutorials/by-title")
-    public ResponseEntity<Slice<Tutorial>> findByExactTitle(@RequestParam String title,
+    public ResponseEntity<Slice<TutorialDto>> findByExactTitle(@RequestParam String title,
             @SortDefault(sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
-        Slice<Tutorial> tutorials = tutorialService.findByExactTitle(title, pageable);
+        Slice<TutorialDto> tutorials = tutorialService.findByExactTitle(title, pageable);
         return ResponseEntity.ok(tutorials);
     }
 
     @GetMapping("/tutorials/{id}")
-    public ResponseEntity<Tutorial> getTutorialById(@PathVariable("id") long id) {
+    public ResponseEntity<TutorialDto> getTutorialById(@PathVariable("id") long id) {
         return tutorialService.getTutorialById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping("/tutorials")
-    public ResponseEntity<Tutorial> createTutorial(@RequestBody Tutorial tutorial) {
-        Tutorial createdTutorial = tutorialService.createTutorial(tutorial);
+    public ResponseEntity<TutorialDto> createTutorial(@RequestBody TutorialDto tutorial) {
+        TutorialDto createdTutorial = tutorialService.createTutorial(tutorial);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdTutorial);
     }
 
     @PutMapping("/tutorials/{id}")
-    public ResponseEntity<Tutorial> updateTutorial(@PathVariable("id") long id, @RequestBody Tutorial tutorial) {
+    public ResponseEntity<TutorialDto> updateTutorial(@PathVariable("id") long id, @RequestBody TutorialDto tutorial) {
         return tutorialService.updateTutorial(id, tutorial)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -78,9 +78,9 @@ public class TutorialController {
     }
 
     @GetMapping("/tutorials/published")
-    public ResponseEntity<Slice<Tutorial>> findByPublished(
+    public ResponseEntity<Slice<TutorialDto>> findByPublished(
             @SortDefault(sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
-        Slice<Tutorial> tutorials = tutorialService.findByPublished(pageable);
+        Slice<TutorialDto> tutorials = tutorialService.findByPublished(pageable);
         return ResponseEntity.ok(tutorials);
     }
 }

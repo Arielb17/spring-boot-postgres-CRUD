@@ -37,11 +37,17 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.bezkoder.spring_boot_jpa_postgresql.model.Tutorial;
+import com.bezkoder.spring_boot_jpa_postgresql.dto.TutorialDto;
 import com.bezkoder.spring_boot_jpa_postgresql.service.TutorialService;
 
 @WebMvcTest(TutorialController.class)
 class TutorialControllerTests {
+
+    private static final String INVALID_JSON_DETAIL = "O corpo da requisição contém JSON inválido.";
+    private static final String MISSING_PARAMETER_DETAIL = "Parâmetro obrigatório ausente.";
+    private static final String INVALID_PARAMETER_DETAIL = "Parâmetro da requisição inválido.";
+    private static final String CONFLICT_DETAIL = "A operação entra em conflito com os dados existentes.";
+    private static final String INTERNAL_ERROR_DETAIL = "Ocorreu um erro interno ao processar a requisição.";
 
     @Autowired
     private MockMvc mockMvc;
@@ -160,8 +166,10 @@ class TutorialControllerTests {
 
         mockMvc.perform(request)
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.detail").value("Ocorreu um erro interno ao processar a requisição."))
-                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("service failure"))));
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value(INTERNAL_ERROR_DETAIL))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("service failure"))));
     }
 
     private static Stream<Arguments> errorRoutes() {
@@ -176,35 +184,39 @@ class TutorialControllerTests {
     void shouldRejectByTitleRequestWithoutTitle() throws Exception {
         mockMvc.perform(get("/api/tutorials/by-title"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("Parâmetro obrigatório ausente."));
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value(MISSING_PARAMETER_DETAIL));
     }
 
     @Test
     void shouldRejectMalformedJson() throws Exception {
         mockMvc.perform(post("/api/tutorials")
-                        .contentType(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
                         .content("{malformed"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("O corpo da requisição contém JSON inválido."));
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value(INVALID_JSON_DETAIL));
     }
 
     @Test
     void shouldRejectInvalidTutorialId() throws Exception {
         mockMvc.perform(get("/api/tutorials/not-a-number"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("Parâmetro da requisição inválido."));
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value(INVALID_PARAMETER_DETAIL));
     }
 
     @Test
     void shouldReturnConflictForDataIntegrityViolation() throws Exception {
-        when(service.createTutorial(any(Tutorial.class)))
+        when(service.createTutorial(any(TutorialDto.class)))
                 .thenThrow(new DataIntegrityViolationException("secret SQL details"));
 
         mockMvc.perform(post("/api/tutorials")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"duplicate\",\"description\":\"x\",\"published\":false}"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.detail").value("A operação entra em conflito com os dados existentes."))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value(CONFLICT_DETAIL))
                 .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("secret SQL details"))));
     }
 
@@ -236,7 +248,7 @@ class TutorialControllerTests {
     void shouldReturnAllTutorials() throws Exception {
         when(service.getAllTutorials(isNull(), any(Pageable.class)))
                 .thenReturn(new SliceImpl<>(
-                        List.of(new Tutorial("Spring Boot", "Tutorial description", false)),
+                        List.of(new TutorialDto("Spring Boot", "Tutorial description", false)),
                         PageRequest.of(0, 20, Sort.by("id").ascending()),
                         false));
 
@@ -249,7 +261,7 @@ class TutorialControllerTests {
     void shouldFilterTutorialsByTitle() throws Exception {
         when(service.getAllTutorials(eq("PostgreSQL"), any(Pageable.class)))
                 .thenReturn(new SliceImpl<>(
-                        List.of(new Tutorial("PostgreSQL", "Tutorial description", false)),
+                        List.of(new TutorialDto("PostgreSQL", "Tutorial description", false)),
                         PageRequest.of(1, 7, Sort.by("title").descending()),
                         false));
 
@@ -267,7 +279,7 @@ class TutorialControllerTests {
     @Test
     void shouldReturnTutorialById() throws Exception {
         when(service.getTutorialById(1L))
-                .thenReturn(Optional.of(new Tutorial("Spring Data JPA", "Tutorial description", false)));
+                .thenReturn(Optional.of(new TutorialDto("Spring Data JPA", "Tutorial description", false)));
 
         mockMvc.perform(get("/api/tutorials/1"))
                 .andExpect(status().isOk())
@@ -276,8 +288,8 @@ class TutorialControllerTests {
 
     @Test
     void shouldCreateTutorialAsUnpublished() throws Exception {
-        when(service.createTutorial(any(Tutorial.class)))
-                .thenReturn(new Tutorial("Maven", "Tutorial description", false));
+        when(service.createTutorial(any(TutorialDto.class)))
+                .thenReturn(new TutorialDto("Maven", "Tutorial description", false));
 
         mockMvc.perform(post("/api/tutorials")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -295,21 +307,22 @@ class TutorialControllerTests {
 
     @Test
     void shouldReturnGenericProblemDetailWhenCreateFailsUnexpectedly() throws Exception {
-        when(service.createTutorial(any(Tutorial.class))).thenThrow(new RuntimeException("service failure"));
+        when(service.createTutorial(any(TutorialDto.class))).thenThrow(new RuntimeException("service failure"));
 
         mockMvc.perform(post("/api/tutorials")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"Maven\",\"description\":\"x\",\"published\":false}"))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.detail").value("Ocorreu um erro interno ao processar a requisição."))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value(INTERNAL_ERROR_DETAIL))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("service failure"))));
     }
 
     @Test
     void shouldUpdateTutorial() throws Exception {
-        when(service.updateTutorial(eq(1L), any(Tutorial.class)))
-                .thenReturn(Optional.of(new Tutorial("New title", "New description", true)));
+        when(service.updateTutorial(eq(1L), any(TutorialDto.class)))
+                .thenReturn(Optional.of(new TutorialDto("New title", "New description", true)));
 
         mockMvc.perform(put("/api/tutorials/1")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -327,14 +340,15 @@ class TutorialControllerTests {
 
     @Test
     void shouldReturnGenericProblemDetailWhenUpdateFailsUnexpectedly() throws Exception {
-        when(service.updateTutorial(eq(1L), any(Tutorial.class)))
+        when(service.updateTutorial(eq(1L), any(TutorialDto.class)))
                 .thenThrow(new RuntimeException("service failure"));
 
         mockMvc.perform(put("/api/tutorials/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"New title\",\"description\":\"x\",\"published\":true}"))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.detail").value("Ocorreu um erro interno ao processar a requisição."))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value(INTERNAL_ERROR_DETAIL))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("service failure"))));
     }
@@ -354,7 +368,8 @@ class TutorialControllerTests {
 
         mockMvc.perform(delete("/api/tutorials/1"))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.detail").value("Ocorreu um erro interno ao processar a requisição."))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value(INTERNAL_ERROR_DETAIL))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("service failure"))));
     }
@@ -374,7 +389,8 @@ class TutorialControllerTests {
 
         mockMvc.perform(delete("/api/tutorials"))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.detail").value("Ocorreu um erro interno ao processar a requisição."))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value(INTERNAL_ERROR_DETAIL))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("service failure"))));
     }
@@ -383,7 +399,7 @@ class TutorialControllerTests {
     void shouldReturnPublishedTutorials() throws Exception {
         when(service.findByPublished(any(Pageable.class)))
                 .thenReturn(new SliceImpl<>(
-                        List.of(new Tutorial("Published", "Tutorial description", true)),
+                        List.of(new TutorialDto("Published", "Tutorial description", true)),
                         PageRequest.of(0, 20, Sort.by("id").ascending()),
                         false));
 
@@ -408,9 +424,9 @@ class TutorialControllerTests {
         }
     }
 
-    private Slice<Tutorial> sliceFor(Pageable pageable, String routeName, boolean hasNext) {
+    private Slice<TutorialDto> sliceFor(Pageable pageable, String routeName, boolean hasNext) {
         return new SliceImpl<>(
-                List.of(new Tutorial("Spring Boot", "Tutorial description", routeName.equals("published"))),
+                List.of(new TutorialDto("Spring Boot", "Tutorial description", routeName.equals("published"))),
                 pageable,
                 hasNext);
     }
@@ -429,7 +445,7 @@ class TutorialControllerTests {
         }
     }
 
-    private Slice<Tutorial> emptySlice(Pageable pageable) {
+    private Slice<TutorialDto> emptySlice(Pageable pageable) {
         return new SliceImpl<>(List.of(), pageable, false);
     }
 

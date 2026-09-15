@@ -14,14 +14,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.bezkoder.spring_boot_jpa_postgresql.model.Author;
+import com.bezkoder.spring_boot_jpa_postgresql.dto.AuthorDto;
 import com.bezkoder.spring_boot_jpa_postgresql.service.RelationshipService;
 
 @WebMvcTest(RelationshipController.class)
 class RelationshipControllerTests {
+
+    private static final String CONFLICT_DETAIL = "A operação entra em conflito com os dados existentes.";
+    private static final String INTERNAL_ERROR_DETAIL = "Ocorreu um erro interno ao processar a requisição.";
 
     @Autowired
     private MockMvc mockMvc;
@@ -31,7 +35,7 @@ class RelationshipControllerTests {
 
     @Test
     void shouldPreserveRelationshipSuccessAndNotFoundContracts() throws Exception {
-        when(service.createAuthor("Ada")).thenReturn(new Author("Ada"));
+        when(service.createAuthor(any(AuthorDto.class))).thenReturn(new AuthorDto("Ada"));
         when(service.getAuthor(99L)).thenReturn(Optional.empty());
 
         mockMvc.perform(post("/api/authors")
@@ -47,27 +51,29 @@ class RelationshipControllerTests {
 
     @Test
     void shouldApplyGlobalConflictContractToRelationshipController() throws Exception {
-        when(service.createAuthor(any(String.class)))
+        when(service.createAuthor(any(AuthorDto.class)))
                 .thenThrow(new DataIntegrityViolationException("secret SQL details"));
 
         mockMvc.perform(post("/api/authors")
                         .contentType("application/json")
                         .content("{\"name\":\"duplicate\"}"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.detail").value("A operação entra em conflito com os dados existentes."))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value(CONFLICT_DETAIL))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("secret SQL details"))));
     }
 
     @Test
     void shouldApplyGlobalUnexpectedErrorContractToRelationshipController() throws Exception {
-        when(service.createAuthor("Ada")).thenThrow(new RuntimeException("service failure"));
+        when(service.createAuthor(any(AuthorDto.class))).thenThrow(new RuntimeException("service failure"));
 
         mockMvc.perform(post("/api/authors")
-                        .contentType("application/json")
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Ada\"}"))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.detail").value("Ocorreu um erro interno ao processar a requisição."))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value(INTERNAL_ERROR_DETAIL))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("service failure"))));
     }
