@@ -34,23 +34,15 @@ public class TutorialController {
     @GetMapping("/tutorials")
     public ResponseEntity<Slice<Tutorial>> getAllTutorials(@RequestParam(required = false) String title,
             @SortDefault(sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
-        try {
-            Slice<Tutorial> tutorials = tutorialService.getAllTutorials(title, pageable);
-            return ResponseEntity.ok(tutorials);
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
+        Slice<Tutorial> tutorials = tutorialService.getAllTutorials(title, pageable);
+        return ResponseEntity.ok(tutorials);
     }
 
     @GetMapping("/tutorials/by-title")
     public ResponseEntity<Slice<Tutorial>> findByExactTitle(@RequestParam String title,
             @SortDefault(sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
-        try {
-            Slice<Tutorial> tutorials = tutorialService.findByExactTitle(title, pageable);
-            return ResponseEntity.ok(tutorials);
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
+        Slice<Tutorial> tutorials = tutorialService.findByExactTitle(title, pageable);
+        return ResponseEntity.ok(tutorials);
     }
 
     @GetMapping("/tutorials/{id}")
@@ -62,12 +54,8 @@ public class TutorialController {
 
     @PostMapping("/tutorials")
     public ResponseEntity<Tutorial> createTutorial(@RequestBody Tutorial tutorial) {
-        try {
-            Tutorial createdTutorial = tutorialService.createTutorial(tutorial);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdTutorial);
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
+        Tutorial createdTutorial = tutorialService.createTutorial(tutorial);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdTutorial);
     }
 
     @PutMapping("/tutorials/{id}")
@@ -79,32 +67,20 @@ public class TutorialController {
 
     @DeleteMapping("/tutorials/{id}")
     public ResponseEntity<Void> deleteTutorial(@PathVariable("id") long id) {
-        try {
-            tutorialService.deleteTutorial(id);
-            return ResponseEntity.noContent().build();
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
+        tutorialService.deleteTutorial(id);
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/tutorials")
     public ResponseEntity<Void> deleteAllTutorials() {
-        try {
-            tutorialService.deleteAllTutorials();
-            return ResponseEntity.noContent().build();
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
+        tutorialService.deleteAllTutorials();
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/tutorials/published")
     public ResponseEntity<Slice<Tutorial>> findByPublished(
             @SortDefault(sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
-        try {
-            Slice<Tutorial> tutorials = tutorialService.findByPublished(pageable);
-            return ResponseEntity.ok(tutorials);
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
+        Slice<Tutorial> tutorials = tutorialService.findByPublished(pageable);
+        return ResponseEntity.ok(tutorials);
     }
 }

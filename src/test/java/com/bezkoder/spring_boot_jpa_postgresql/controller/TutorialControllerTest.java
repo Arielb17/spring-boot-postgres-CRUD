@@ -1,7 +1,7 @@
 package com.bezkoder.spring_boot_jpa_postgresql.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.doThrow;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -79,21 +79,18 @@ class TutorialControllerTest {
     }
 
     @Test
-    void getAllTutorialsReturnsInternalServerErrorOnUnexpectedError() {
+    void getAllTutorialsPropagatesUnexpectedError() {
         when(tutorialService.getAllTutorials(null, pageable)).thenThrow(new RuntimeException());
-        ResponseEntity<Slice<Tutorial>> response = tutorialController.getAllTutorials(null, pageable);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(response.getBody()).isNull();
+        assertThatThrownBy(() -> tutorialController.getAllTutorials(null, pageable))
+                .isInstanceOf(RuntimeException.class);
     }
 
     @Test
-    void getAllTutorialsWithTitleReturnsInternalServerErrorOnUnexpectedError() {
+    void getAllTutorialsWithTitlePropagatesUnexpectedError() {
         when(tutorialService.getAllTutorials("Spring", pageable)).thenThrow(new RuntimeException());
 
-        ResponseEntity<Slice<Tutorial>> response = tutorialController.getAllTutorials("Spring", pageable);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(response.getBody()).isNull();
+        assertThatThrownBy(() -> tutorialController.getAllTutorials("Spring", pageable))
+                .isInstanceOf(RuntimeException.class);
     }
 
     @Test
@@ -116,11 +113,10 @@ class TutorialControllerTest {
     }
 
     @Test
-    void findByExactTitleReturnsInternalServerErrorOnUnexpectedError() {
+    void findByExactTitlePropagatesUnexpectedError() {
         when(tutorialService.findByExactTitle("Spring", pageable)).thenThrow(new RuntimeException());
-        ResponseEntity<Slice<Tutorial>> response = tutorialController.findByExactTitle("Spring", pageable);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(response.getBody()).isNull();
+        assertThatThrownBy(() -> tutorialController.findByExactTitle("Spring", pageable))
+                .isInstanceOf(RuntimeException.class);
     }
 
     @Test
@@ -157,14 +153,12 @@ class TutorialControllerTest {
     }
 
     @Test
-    void createTutorialReturnsInternalServerErrorOnUnexpectedError() {
+    void createTutorialPropagatesUnexpectedError() {
         Tutorial tutorial = new Tutorial("Spring", "REST API", false);
         when(tutorialService.createTutorial(tutorial)).thenThrow(new RuntimeException());
 
-        ResponseEntity<Tutorial> response = tutorialController.createTutorial(tutorial);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(response.getBody()).isNull();
+        assertThatThrownBy(() -> tutorialController.createTutorial(tutorial))
+                .isInstanceOf(RuntimeException.class);
     }
 
     @Test
@@ -200,13 +194,10 @@ class TutorialControllerTest {
     }
 
     @Test
-    void deleteTutorialReturnsInternalServerErrorOnUnexpectedError() {
-        doThrow(new RuntimeException()).when(tutorialService).deleteTutorial(1L);
-
-        ResponseEntity<Void> response = tutorialController.deleteTutorial(1L);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(response.getBody()).isNull();
+    void deleteTutorialPropagatesUnexpectedError() {
+        org.mockito.Mockito.doThrow(new RuntimeException()).when(tutorialService).deleteTutorial(1L);
+        assertThatThrownBy(() -> tutorialController.deleteTutorial(1L))
+                .isInstanceOf(RuntimeException.class);
     }
 
     @Test
@@ -219,13 +210,10 @@ class TutorialControllerTest {
     }
 
     @Test
-    void deleteAllTutorialsReturnsInternalServerErrorOnUnexpectedError() {
-        doThrow(new RuntimeException()).when(tutorialService).deleteAllTutorials();
-
-        ResponseEntity<Void> response = tutorialController.deleteAllTutorials();
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(response.getBody()).isNull();
+    void deleteAllTutorialsPropagatesUnexpectedError() {
+        org.mockito.Mockito.doThrow(new RuntimeException()).when(tutorialService).deleteAllTutorials();
+        assertThatThrownBy(() -> tutorialController.deleteAllTutorials())
+                .isInstanceOf(RuntimeException.class);
     }
 
     @Test
@@ -247,11 +235,10 @@ class TutorialControllerTest {
     }
 
     @Test
-    void findByPublishedReturnsInternalServerErrorOnUnexpectedError() {
+    void findByPublishedPropagatesUnexpectedError() {
         when(tutorialService.findByPublished(pageable)).thenThrow(new RuntimeException());
-        ResponseEntity<Slice<Tutorial>> response = tutorialController.findByPublished(pageable);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(response.getBody()).isNull();
+        assertThatThrownBy(() -> tutorialController.findByPublished(pageable))
+                .isInstanceOf(RuntimeException.class);
     }
 
     private Slice<Tutorial> filledSlice() {
