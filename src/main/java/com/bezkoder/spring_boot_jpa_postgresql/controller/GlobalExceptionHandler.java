@@ -1,5 +1,7 @@
 package com.bezkoder.spring_boot_jpa_postgresql.controller;
 
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
@@ -18,27 +20,32 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import com.bezkoder.spring_boot_jpa_postgresql.exception.ResourceNotFoundException;
 
 @RestControllerAdvice
-public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+@NullMarked
+public class  GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @Override
+    @Nullable
     protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
             HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         return response("O corpo da requisição contém JSON inválido.", headers, HttpStatus.BAD_REQUEST, request, ex);
     }
 
     @Override
+    @Nullable
     protected ResponseEntity<Object> handleMissingServletRequestParameter(MissingServletRequestParameterException ex,
             HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         return response("Parâmetro obrigatório ausente.", headers, HttpStatus.BAD_REQUEST, request, ex);
     }
 
     @Override
+    @Nullable
     protected ResponseEntity<Object> handleServletRequestBindingException(ServletRequestBindingException ex,
             HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         return response("Parâmetro da requisição inválido.", headers, HttpStatus.BAD_REQUEST, request, ex);
     }
 
     @Override
+    @Nullable
     protected ResponseEntity<Object> handleTypeMismatch(TypeMismatchException ex,
             HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         return response("Parâmetro da requisição inválido.", headers, HttpStatus.BAD_REQUEST, request, ex);
@@ -63,7 +70,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @Override
-    protected ResponseEntity<Object> handleExceptionInternal(Exception ex, Object body, HttpHeaders headers,
+    @Nullable
+    protected ResponseEntity<Object> handleExceptionInternal(Exception ex, @Nullable Object body, HttpHeaders headers,
             HttpStatusCode status, WebRequest request) {
         if (status.is5xxServerError()) {
             logger.error("Unexpected application failure while handling request", ex);
@@ -71,6 +79,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return super.handleExceptionInternal(ex, body, headers, status, request);
     }
 
+    @Nullable
     private ResponseEntity<Object> response(String detail, HttpHeaders headers, HttpStatusCode status,
             WebRequest request, Exception ex) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
